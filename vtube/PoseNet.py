@@ -1,3 +1,4 @@
+from types import new_class
 from numpy.core.numerictypes import _construct_lookups
 import cv2
 import numpy as np
@@ -5,40 +6,38 @@ import tensorflow as tf
 
 
 class PoseNet:
-    def __init__(self):
-        self.interpreter = tf.lite.Interpreter(
+    def __init__(self, smoothing=0.7):
+        self._interpreter = tf.lite.Interpreter(
             model_path="vtube/resources/models/posenet.tflite"
         )
-        self.interpreter.allocate_tensors()
+        self._interpreter.allocate_tensors()
 
-        self.input_details = self.interpreter.get_input_details()
-        self.output_details = self.interpreter.get_output_details()
+        self._input_details = self._interpreter.get_input_details()
+        self._output_details = self._interpreter.get_output_details()
+
+        self.smoothing = smoothing
+        self.pose = np.array([[0, 0, 0] for _ in range(17)])
 
     def detect(self, image):
-        (height, width, _) = image.shape
+        model_width = self._input_details[0]["shape"][1]
+        model_height = self._input_details[0]["shape"][2]
 
-        model_width = self.input_details[0]["shape"][1]
-        model_height = self.input_details[0]["shape"][2]
-
-        resized = cv2.resize(
-            image,
-            (model_width, model_height),
-        )
+        resized = cv2.resize(image, (model_width, model_height),)
 
         reshaped = (
             (
                 np.array(resized)
                 .astype(np.float32)
-                .reshape(self.input_details[0]["shape"])
+                .reshape(self._input_details[0]["shape"])
             )
             - 127.5
         ) / 127.5
 
-        self.interpreter.set_tensor(self.input_details[0]["index"], reshaped)
-        self.interpreter.invoke()
+        self._interpreter.set_tensor(self._input_details[0]["index"], reshaped)
+        self._interpreter.invoke()
 
-        output_data = self.interpreter.get_tensor(self.output_details[0]["index"])
-        offset_data = self.interpreter.get_tensor(self.output_details[1]["index"])
+        output_data = self._interpreter.get_tensor(self._output_details[0]["index"])
+        offset_data = self._interpreter.get_tensor(self._output_details[1]["index"])
 
         template_heatmaps = np.squeeze(output_data)
         template_offsets = np.squeeze(offset_data)
@@ -50,40 +49,41 @@ class PoseNet:
         template_show = np.array(template_show * 255, np.uint8)
         template_kps = parse_output(template_heatmaps, template_offsets, 0.3)
 
-        image_coords = (
-            template_kps * np.array([height / model_height, width / model_width, 1])
-        ).astype(int)
-
-        return {
-            label: {
-                "y": image_coords[i][0],
-                "x": image_coords[i][1],
-                "confidence": image_coords[i][2],
-            }
-            for (i, label) in enumerate(labels)
-        }
+        return np.array(template_kps) / [model_height, model_width, 1]
 
     def update(self, image):
-        self.pose = self.detect(image)
+        new_pose = self.detect(image)
+
+        self.pose = [
+            p * [1, 1, 0.5]
+            if n_p[2] <= 0.1
+            else n_p
+            if p[2] <= 0.1
+            else p * (self.smoothing) + n_p * (1 - self.smoothing)
+            for p, n_p in zip(self.pose, new_pose)
+        ]
 
         return self
 
-    def draw(self, image):
-        for (label, part) in self.pose.items():
-            x, y, confidence = (part["x"], part["y"], part["confidence"])
+    def draw(self, image, draw_labels=True):
+        (height, width, _) = image.shape
 
-            if confidence:
-                cv2.circle(image, (x, y), 2, (0, 255, 255), -1)
-                cv2.putText(
-                    image,
-                    label,
-                    (x, y),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 255, 255),
-                    1,
-                    cv2.LINE_AA,
-                )
+        for i, [y, x, c] in enumerate(self.pose):
+            if c > 0.1:
+                coord = (int(x * width), int(y * height))
+
+                cv2.circle(image, coord, 2, (0, 255, 255), -1)
+                if draw_labels:
+                    cv2.putText(
+                        image,
+                        labels[i],
+                        coord,
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (0, 255, 255),
+                        1,
+                        cv2.LINE_AA,
+                    )
 
         return image
 
