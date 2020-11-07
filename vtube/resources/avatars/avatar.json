@@ -1,0 +1,20 @@
+{
+  "body": {
+    "parts": ["avatar/body.PNG"]
+  },
+  "head": {
+    "parts": ["avatar/head.PNG"]
+  },
+  "face": {
+    "parts": ["avatar/nose.PNG"]
+  },
+  "mouth": {
+    "parts": ["avatar/mouth.PNG"]
+  },
+  "left_eye": {
+    "parts": ["avatar/leftEye.PNG"]
+  },
+  "right_eye": {
+    "parts": ["avatar/rightEye.PNG"]
+  }
+}

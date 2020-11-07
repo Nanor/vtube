@@ -2,10 +2,15 @@ import cv2
 import numpy as np
 
 from .PoseNet import PoseNet
+from .Avatar import Avatar
 
 
 def main():
+    flip = True
+
     posenet = PoseNet()
+    model = Avatar("avatar", (0, 100), 700, flip)
+    # model = Avatar("avatar_2", (-100, -100), 900, flip)
 
     cap = cv2.VideoCapture(0)
 
@@ -14,12 +19,18 @@ def main():
 
     while cap.isOpened():
         ret, frame = cap.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        frame = cv2.flip(frame, 1)
+        if flip:
+            frame = cv2.flip(frame, 1)
 
         posenet.update(frame)
-        posenet.draw(frame)
+        # posenet.draw(frame, False)
 
+        frame = model.draw(frame)
+        frame = np.array(frame)
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         cv2.imshow("output", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
