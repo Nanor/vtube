@@ -5,10 +5,12 @@ from PIL import Image, ImageFilter
 
 
 class Avatar:
-    def __init__(self, name, root=(0, 0), size=700, flip=False):
+    def __init__(self, pose, name, root=(0, 0), size=700, flip=False):
+        self.pose = pose
         self.name = name
         self.root = root
         self.size = size
+        self.flip = flip
 
         with open("./vtube/resources/avatars/{}.json".format(name), mode="r") as f:
             self.json = json.load(f)
@@ -29,15 +31,17 @@ class Avatar:
                 (int(self.size), int(self.size * p_height / p_width)), Image.BILINEAR
             ).convert("RGBA")
 
-            if flip:
-                scaled = scaled.transpose(Image.FLIP_LEFT_RIGHT)
-
             self._parts[part] = scaled
 
     def draw(self, frame):
         image = Image.fromarray(frame)
 
         for part in self._parts.values():
+            part = part.rotate(self.pose.root_angle)
+
+            if self.flip:
+                part = part.transpose(Image.FLIP_LEFT_RIGHT)
+
             image.paste(part, self.root, part)
 
         return image

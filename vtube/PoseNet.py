@@ -87,6 +87,11 @@ class PoseNet:
 
         return image
 
+    def get(self, label):
+        index = labels.index(label)
+
+        return (self.pose[index][1], self.pose[index][0])
+
 
 labels = [
     "nose",

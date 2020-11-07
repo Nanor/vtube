@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from .PoseNet import PoseNet
+from .Pose import Pose
 from .Avatar import Avatar
 
 
@@ -9,8 +10,9 @@ def main():
     flip = True
 
     posenet = PoseNet()
-    model = Avatar("avatar", (0, 100), 700, flip)
-    # model = Avatar("avatar_2", (-100, -100), 900, flip)
+    pose = Pose(posenet)
+    avatar = Avatar(pose, "avatar", (0, 100), 700, flip)
+    # avatar = Avatar(pose, "avatar_2", (-100, -100), 900, flip)
 
     cap = cv2.VideoCapture(0)
 
@@ -27,7 +29,11 @@ def main():
         posenet.update(frame)
         # posenet.draw(frame, False)
 
-        frame = model.draw(frame)
+        pose.calc()
+
+        pose.debug(frame)
+
+        frame = avatar.draw(frame)
         frame = np.array(frame)
 
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
