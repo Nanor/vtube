@@ -4,3 +4,5 @@ __pycache__/
 # Image files
 *.kra~
 *.kra-autosave.kra
+
+.DS_Store

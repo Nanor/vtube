@@ -1,20 +1,28 @@
 {
   "body": {
-    "parts": ["avatar/body.PNG"]
+    "parts": ["avatar/body.PNG"],
+    "origin": [575, 1500],
+    "tiltScale": 0.4
   },
   "head": {
-    "parts": ["avatar/head.PNG"]
+    "parts": ["avatar/head.PNG"],
+    "origin": [550, 560]
   },
   "face": {
-    "parts": ["avatar/nose.PNG"]
+    "parts": ["avatar/nose.PNG"],
+    "paralax": 0.3
   },
   "mouth": {
-    "parts": ["avatar/mouth.PNG"]
+    "parts": ["avatar/mouth.PNG"],
+    "origin": [550, 500],
+    "paralax": 0.2
   },
   "left_eye": {
-    "parts": ["avatar/leftEye.PNG"]
+    "parts": ["avatar/leftEye.PNG"],
+    "paralax": 0.2
   },
   "right_eye": {
-    "parts": ["avatar/rightEye.PNG"]
+    "parts": ["avatar/rightEye.PNG"],
+    "paralax": 0.2
   }
 }

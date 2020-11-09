@@ -8,6 +8,8 @@ from .Avatar import Avatar
 
 def main():
     flip = True
+    webcam = False
+    greenscreen = False
 
     posenet = PoseNet()
     pose = Pose(posenet)
@@ -16,8 +18,12 @@ def main():
 
     cap = cv2.VideoCapture(0)
 
+    if webcam:
+        cv2.namedWindow("webcam", cv2.WINDOW_AUTOSIZE)
+        cv2.moveWindow("webcam", 50, 100)
+
     cv2.namedWindow("output", cv2.WINDOW_AUTOSIZE)
-    cv2.moveWindow("output", 100, 100)
+    cv2.moveWindow("output", 900, 150)
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -33,13 +39,23 @@ def main():
 
         pose.debug(frame)
 
-        frame = avatar.draw(frame)
-        frame = np.array(frame)
+        avatar_frame = np.array(avatar.draw(greenscreen))
 
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imshow("output", frame)
+        if webcam:
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            cv2.imshow("webcam", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        avatar_frame = cv2.cvtColor(avatar_frame, cv2.COLOR_RGB2BGR)
+        cv2.imshow("output", avatar_frame)
+
+        key = cv2.waitKey(1)
+        if key & 0xFF == ord(" "):
+            pose.reset()
+
+        if key & 0xFF == ord("g"):
+            greenscreen = not greenscreen
+
+        if key & 0xFF == ord("q"):
             break
 
     cap.release()
