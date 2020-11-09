@@ -1,5 +1,7 @@
 import json
 from PIL import Image
+from numpy.core.defchararray import center
+from numpy.lib.utils import safe_eval
 
 
 class Avatar:
@@ -46,6 +48,16 @@ class Avatar:
             root_angle = (
                 self.pose.params["root_angle"] * self._json["body"]["tiltScale"]
             )
+
+            if name == "mouth":
+                (w, h) = part.size
+                new_image = Image.new("RGBA", (w, h * 2), (0, 0, 0, 0))
+
+                scale = self.pose.params["mouth_open"]
+                part = part.resize((w, int(h * scale)))
+
+                new_image.paste(part, (0, int(origin[1] - origin[1] * scale)), part)
+                part = new_image
 
             if name != "body":
                 try:

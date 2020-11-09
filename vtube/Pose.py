@@ -5,24 +5,32 @@ from collections import defaultdict
 
 
 class Pose:
-    def __init__(self, posenet):
+    def __init__(self, posenet, face):
         self.posenet = posenet
+        self.face = face
 
         self.offsets = defaultdict(lambda: 0)
 
     def calc(self):
-        shoulder_diff_x = (
-            self.posenet.get("left_shoulder")[0] - self.posenet.get("right_shoulder")[0]
-        )
-        shoulder_diff_y = (
-            self.posenet.get("left_shoulder")[1] - self.posenet.get("right_shoulder")[1]
-        )
+        try:
+            shoulder_diff_x = (
+                self.posenet.get("left_shoulder")[0]
+                - self.posenet.get("right_shoulder")[0]
+            )
+            shoulder_diff_y = (
+                self.posenet.get("left_shoulder")[1]
+                - self.posenet.get("right_shoulder")[1]
+            )
+            root_angle = math.degrees(
+                math.atan(shoulder_diff_y / shoulder_diff_x)
+                if shoulder_diff_x != 0
+                else 0
+            )
+        except TypeError:
+            root_angle = 0
+
         eye_diff_x = self.posenet.get("left_eye")[0] - self.posenet.get("right_eye")[0]
         eye_diff_y = self.posenet.get("left_eye")[1] - self.posenet.get("right_eye")[1]
-
-        root_angle = math.degrees(
-            math.atan(shoulder_diff_y / shoulder_diff_x) if shoulder_diff_x != 0 else 0
-        )
 
         head_tilt = math.degrees(
             math.atan(eye_diff_y / eye_diff_x) if eye_diff_x != 0 else 0
@@ -43,14 +51,23 @@ class Pose:
             / eye_diff_x
         ) - 0.7
 
+        mouth_width = self.face.get("mouth_right")[0] - self.face.get("mouth_left")[0]
+        mouth_height = self.face.get("mouth_bottom")[1] - self.face.get("mouth_top")[1]
+        mouth_ratio = mouth_height / mouth_width
+        mouth_open = max(0.1, (mouth_ratio - 0.2) / 0.4)
+
         params = {
             "root_angle": root_angle,
             "head_tilt": head_tilt,
             "head_look": head_look,
             "head_nod": head_nod,
+            "mouth_open": mouth_open,
         }
 
-        self.params = {k: v - self.offsets[k] for k, v in params.items()}
+        self.params = {
+            k: v - self.offsets[k] if k != "mouth_open" else v
+            for k, v in params.items()
+        }
 
     def reset(self):
         self.offsets = {k: self.offsets[k] + self.params[k] for k in self.params}

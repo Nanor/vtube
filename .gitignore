@@ -1,6 +1,8 @@
 *.pyc
 __pycache__/
 
+/data/
+
 # Image files
 *.kra~
 *.kra-autosave.kra

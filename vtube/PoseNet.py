@@ -1,8 +1,9 @@
-from types import new_class
 from numpy.core.numerictypes import _construct_lookups
 import cv2
 import numpy as np
 import tensorflow as tf
+
+from .ImageUtils import extract
 
 
 class PoseNet:
@@ -89,8 +90,48 @@ class PoseNet:
 
     def get(self, label):
         index = labels.index(label)
+        point = self.pose[index]
+        return (point[1], point[0]) if point[2] > 0.1 else None
 
-        return (self.pose[index][1], self.pose[index][0])
+    def face_bounds(self, aspect=1):
+        points = [self.get(l) for l in labels[:5]]
+
+        (x, y) = self.get("nose")
+
+        min_x = min(p[0] for p in points if p is not None)
+        max_x = max(p[0] for p in points if p is not None)
+        width = max_x - min_x
+
+        bounds_scale = 0.7
+        bounds = [
+            x - width * bounds_scale,
+            y - width * bounds_scale * aspect,
+            x + width * bounds_scale,
+            y + width * bounds_scale * aspect,
+        ]
+
+        return bounds
+
+    def draw_face_bounds(self, frame):
+        (h, w, _) = frame.shape
+        face_bounds = np.array(self.face_bounds(w / h)) * [w, h, w, h]
+        cv2.rectangle(
+            frame,
+            (
+                int(face_bounds[0]),
+                int(face_bounds[1]),
+                int(face_bounds[2] - face_bounds[0]),
+                int(face_bounds[3] - face_bounds[1]),
+            ),
+            (100, 100, 200),
+            2,
+        )
+
+    def extract_face(self, frame):
+        (h, w, _) = frame.shape
+        b = self.face_bounds(w / h)
+
+        return (extract(frame, b, True), b)
 
 
 labels = [

@@ -3,7 +3,9 @@ import numpy as np
 
 from .PoseNet import PoseNet
 from .Pose import Pose
+from .Face import Face
 from .Avatar import Avatar
+from .ImageUtils import extract
 
 
 def main():
@@ -11,8 +13,12 @@ def main():
     webcam = False
     greenscreen = False
 
+    h_index = 0
+
     posenet = PoseNet()
-    pose = Pose(posenet)
+    face = Face()
+    pose = Pose(posenet, face)
+
     avatar = Avatar(pose, "avatar", (0, 100), 700, flip)
     # avatar = Avatar(pose, "avatar_2", (-100, -100), 900, flip)
 
@@ -34,14 +40,22 @@ def main():
 
         posenet.update(frame)
         # posenet.draw(frame, False)
+        face_frame, face_bounds = posenet.extract_face(frame)
+        face.update(face_frame)
 
         pose.calc()
-
-        pose.debug(frame)
 
         avatar_frame = np.array(avatar.draw(greenscreen))
 
         if webcam:
+            # (h, w, _) = face.shape
+            # frame[:h, :w] = face
+
+            # posenet.draw_face_bounds(frame)
+            face.draw(extract(frame, face_bounds, True), h_index)
+
+            pose.debug(frame)
+
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             cv2.imshow("webcam", frame)
 
@@ -51,6 +65,9 @@ def main():
         key = cv2.waitKey(1)
         if key & 0xFF == ord(" "):
             pose.reset()
+
+        if key & 0xFF == ord("n"):
+            h_index += 1
 
         if key & 0xFF == ord("g"):
             greenscreen = not greenscreen
