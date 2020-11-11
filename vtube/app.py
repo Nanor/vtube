@@ -1,5 +1,7 @@
+from PIL.Image import Image
 import cv2
 import numpy as np
+from PIL import Image
 
 from .PoseNet import PoseNet
 from .Pose import Pose
@@ -19,7 +21,7 @@ def main():
     face = Face()
     pose = Pose(posenet, face)
 
-    avatar = Avatar(pose, "avatar", (0, 100), 700, flip)
+    avatar = Avatar(pose, "avatar", flip)
     # avatar = Avatar(pose, "avatar_2", (-100, -100), 900, flip)
 
     cap = cv2.VideoCapture(0)
@@ -45,7 +47,8 @@ def main():
 
         pose.calc()
 
-        avatar_frame = np.array(avatar.draw(greenscreen))
+        output = avatar.draw(greenscreen).resize((512, 512), resample=Image.BICUBIC)
+        avatar_frame = np.array(output)
 
         if webcam:
             # (h, w, _) = face.shape

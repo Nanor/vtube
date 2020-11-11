@@ -1,15 +1,11 @@
 import json
 from PIL import Image
-from numpy.core.defchararray import center
-from numpy.lib.utils import safe_eval
 
 
 class Avatar:
-    def __init__(self, pose, name, root=(0, 0), size=700, flip=False):
+    def __init__(self, pose, name, flip=False):
         self.pose = pose
         self.name = name
-        self.root = root
-        self.size = size
         self.flip = flip
 
         with open("./vtube/resources/avatars/{}.json".format(name), mode="r") as f:
@@ -28,12 +24,12 @@ class Avatar:
 
             p_width, p_height = image.size
             scaled = image.resize(
-                (int(self.size), int(self.size * p_height / p_width)), Image.BILINEAR
+                (p_width // 2, p_height // 2), Image.BILINEAR
             ).convert("RGBA")
 
             try:
                 json_origin = self._json[part]["origin"]
-                scale_factor = self.size / p_width
+                scale_factor = 0.5
                 origin = (json_origin[0] * scale_factor, json_origin[1] * scale_factor)
             except KeyError:
                 origin = scaled.size[0] / 2, scaled.size[1] / 2
@@ -42,7 +38,7 @@ class Avatar:
 
     def draw(self, greenscreen=False):
         background = (0, 255, 0) if greenscreen else (0, 0, 0)
-        image = Image.new("RGB", (self.size, self.size), background)
+        image = Image.new("RGB", self._parts["body"][0].size, background)
 
         for (name, (part, origin)) in self._parts.items():
             root_angle = (
@@ -88,7 +84,7 @@ class Avatar:
             if self.flip:
                 part = part.transpose(Image.FLIP_LEFT_RIGHT)
 
-            image.paste(part, self.root, part)
+            image.paste(part, (0, 0), part)
 
         return image
 
