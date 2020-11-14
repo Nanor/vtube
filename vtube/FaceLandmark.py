@@ -70,23 +70,17 @@ class FaceLandmark:
         for b in bounds.values():
             cv2.rectangle(
                 frame,
-                (
-                    int(b[0]),
-                    int(b[1]),
-                    int(b[2] - b[0]),
-                    int(b[3] - b[1]),
-                ),
+                (int(b[0]), int(b[1]), int(b[2] - b[0]), int(b[3] - b[1]),),
                 (100, 100, 200),
                 2,
             )
 
     def eye_bounds(self):
         bounds = {}
-        for side in ['left', 'right']:
+        for side in ["left", "right"]:
             groups = [k for k in MESH_ANNOTATIONS.keys() if "{}Eye".format(side) in k]
             indexes = set(i for g in groups for i in MESH_ANNOTATIONS[g])
             points = [self.points[i] for i in indexes]
-
 
             bounds[side] = [
                 min(p[0] for p in points),
@@ -96,6 +90,21 @@ class FaceLandmark:
             ]
 
         return bounds
+
+    def point(self, label):
+        if label == "nose":
+            groups = ["noseTip"]
+        elif label == "left_eye":
+            groups = [k for k in MESH_ANNOTATIONS.keys() if "leftEye" in k]
+        elif label == "right_eye":
+            groups = [k for k in MESH_ANNOTATIONS.keys() if "rightEye" in k]
+        else:
+            raise Exception("Unknown label {}".format(label))
+
+        indexes = set(i for g in groups for i in MESH_ANNOTATIONS[g])
+        points = [self.points[i] for i in indexes]
+
+        return np.sum(points, axis=0) / len(points)
 
 
 MESH_ANNOTATIONS = {

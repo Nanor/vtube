@@ -60,12 +60,12 @@ class Avatar:
                     horz = (
                         self.pose.params["head_look"]
                         * self._json[name]["paralax"]
-                        * 400
+                        * 10
                     )
                     vert = (
                         -self.pose.params["head_nod"]
                         * self._json[name]["paralax"]
-                        * 400
+                        * 10
                     )
 
                     part = part.transform(
