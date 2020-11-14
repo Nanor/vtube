@@ -1,16 +1,9 @@
-from PIL.Image import Image
 import cv2
-import numpy as np
-from PIL import Image
 
-from .svgTest import main as svg
 
 from .FaceLandmark import FaceLandmark
 from .IrisLandmark import IrisLandmark
 from .PoseNet import PoseNet
-from .Pose import Pose
-from .Avatar import Avatar
-from .ImageUtils import extract
 
 
 def main():
@@ -21,7 +14,9 @@ def main():
     greenscreen = False
 
     debug_mode = 0
-    debug_modes = 4
+    debug_modes = 5
+
+    group_index = None
 
     face_landmark = FaceLandmark()
     iris_landmark = IrisLandmark()
@@ -46,20 +41,22 @@ def main():
         if flip:
             frame = cv2.flip(frame, 1)
 
-        posenet.update(frame)
-        if face_bounds is None:
+        if face_bounds is None or debug_mode in [1, 2]:
+            posenet.update(frame)
             face_frame, face_bounds = posenet.extract_face(frame)
 
         face_landmark.update(frame, face_bounds)
-        iris_landmark.update(frame, face_landmark.bounds)
+        iris_landmark.update(frame, face_landmark.eye_bounds())
 
         if debug_mode == 1:
             posenet.draw(frame, False)
         elif debug_mode == 2:
             posenet.draw_face_bounds(frame)
         elif debug_mode == 3:
-            face_landmark.draw(frame)
+            face_landmark.draw(frame, group_index)
         elif debug_mode == 4:
+            face_landmark.draw_eye_bounds(frame)
+        elif debug_mode == 5:
             iris_landmark.draw(frame)
 
         # pose.calc()
@@ -93,6 +90,12 @@ def main():
             debug_mode += 1
             if debug_mode > debug_modes:
                 debug_mode = 0
+
+        if key & 0xFF == ord("m"):
+            if group_index is None:
+                group_index = 0
+            else:
+                group_index += 1
 
         if key & 0xFF == ord("g"):
             greenscreen = not greenscreen
