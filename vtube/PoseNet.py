@@ -1,77 +1,29 @@
-from numpy.core.numerictypes import _construct_lookups
+from vtube.TfModel import TfModel
 import cv2
 import numpy as np
-import tensorflow as tf
 
 from .ImageUtils import extract
 
 
 class PoseNet:
-    def __init__(self, smoothing=0.7):
-        self._interpreter = tf.lite.Interpreter(
-            model_path="vtube/resources/models/posenet.tflite"
-        )
-        self._interpreter.allocate_tensors()
-
-        self._input_details = self._interpreter.get_input_details()
-        self._output_details = self._interpreter.get_output_details()
-
-        self.smoothing = smoothing
-        self.pose = np.array([[0, 0, 0] for _ in range(17)])
-
-    def detect(self, image):
-        model_width = self._input_details[0]["shape"][1]
-        model_height = self._input_details[0]["shape"][2]
-
-        resized = cv2.resize(image, (model_width, model_height),)
-
-        reshaped = (
-            (
-                np.array(resized)
-                .astype(np.float32)
-                .reshape(self._input_details[0]["shape"])
-            )
-            - 127.5
-        ) / 127.5
-
-        self._interpreter.set_tensor(self._input_details[0]["index"], reshaped)
-        self._interpreter.invoke()
-
-        output_data = self._interpreter.get_tensor(self._output_details[0]["index"])
-        offset_data = self._interpreter.get_tensor(self._output_details[1]["index"])
-
-        template_heatmaps = np.squeeze(output_data)
-        template_offsets = np.squeeze(offset_data)
-
-        self.template_heatmaps = template_heatmaps
-        self.template_offsets = template_offsets
-
-        template_show = np.squeeze((reshaped.copy() * 127.5 + 127.5) / 255.0)
-        template_show = np.array(template_show * 255, np.uint8)
-        template_kps = parse_output(template_heatmaps, template_offsets, 0.3)
-
-        return np.array(template_kps) / [model_height, model_width, 1]
+    def __init__(self):
+        self.model = TfModel("posenet")
 
     def update(self, image):
-        new_pose = self.detect(image)
 
-        self.pose = [
-            p * [1, 1, 0.5]
-            if n_p[2] <= 0.1
-            else n_p
-            if p[2] <= 0.1
-            else p * (self.smoothing) + n_p * (1 - self.smoothing)
-            for p, n_p in zip(self.pose, new_pose)
-        ]
+        (heatmaps, offsets, _, _) = self.model.run(image)
 
-        return self
+        points = parse_output(heatmaps, offsets, 0.3)
+
+        (h, w, _) = image.shape
+        (m_w, m_h) = self.model.size()
+
+        self.points = [[x * w / m_w, y * h / m_h, c] for [y, x, c] in points]
 
     def draw(self, image, draw_labels=True):
-        (height, width, _) = image.shape
-
-        for i, [y, x, c] in enumerate(self.pose):
+        for i, [x, y, c] in enumerate(self.points):
             if c > 0.1:
-                coord = (int(x * width), int(y * height))
+                coord = (int(x), int(y))
 
                 cv2.circle(image, coord, 2, (0, 255, 255), -1)
                 if draw_labels:
@@ -90,31 +42,32 @@ class PoseNet:
 
     def get(self, label):
         index = labels.index(label)
-        point = self.pose[index]
-        return (point[1], point[0]) if point[2] > 0.1 else None
+        point = self.points[index]
+        return (point[0], point[1]) if point[2] > 0.1 else None
 
-    def face_bounds(self, aspect=1):
-        points = [self.get(l) for l in labels[:5]]
+    def face_bounds(self):
+        (x1, y1) = self.get("left_eye")
+        (x2, y2) = self.get("right_eye")
 
-        (x, y) = self.get("nose")
-
-        min_x = min(p[0] for p in points if p is not None)
-        max_x = max(p[0] for p in points if p is not None)
+        min_x = min(x1, x2)
+        max_x = max(x1, x2)
         width = max_x - min_x
 
-        bounds_scale = 0.7
+        x = (x1 + x2) / 2
+        y = (y1 + y2) / 2 + width / 2
+
+        bounds_scale = 1.3
         bounds = [
             x - width * bounds_scale,
-            y - width * bounds_scale * aspect,
+            y - width * bounds_scale,
             x + width * bounds_scale,
-            y + width * bounds_scale * aspect,
+            y + width * bounds_scale,
         ]
 
         return bounds
 
     def draw_face_bounds(self, frame):
-        (h, w, _) = frame.shape
-        face_bounds = np.array(self.face_bounds(w / h)) * [w, h, w, h]
+        face_bounds = np.array(self.face_bounds())
         cv2.rectangle(
             frame,
             (
@@ -128,10 +81,9 @@ class PoseNet:
         )
 
     def extract_face(self, frame):
-        (h, w, _) = frame.shape
-        b = self.face_bounds(w / h)
+        b = self.face_bounds()
 
-        return (extract(frame, b, True), b)
+        return (extract(frame, b), b)
 
 
 labels = [
