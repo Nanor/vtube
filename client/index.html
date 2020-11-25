@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>vtube client</title>
+    <link href="index.css" rel="stylesheet"></head>
+  </head>
+  <body>
+    <object id="svg" data="drawing.svg" type="image/svg+xml"></object>
+    <div id="canvas"></div>
+    <div id="controls"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/2.2.0/anime.min.js"></script>
+    <script src="index.js"></script>
+    <script>
+      let ws = new WebSocket("ws://127.0.0.1:5678/");
+      ws.onmessage = function (event) {
+        let content = event.data;
+        let json = JSON.parse(content);
+        window.pose = json;
+      };
+    </script>
+  </body>
+</html>

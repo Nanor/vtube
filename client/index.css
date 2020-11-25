@@ -1,0 +1,17 @@
+#canvas,
+#controls {
+  display: inline-block;
+  vertical-align: top;
+}
+
+#root {
+  transform-origin: 50% 150%;
+}
+
+#head {
+  transform-origin: calc(50% - 7px) calc(50% + 23px);
+}
+
+#nose {
+  transform-origin: 50%;
+}
